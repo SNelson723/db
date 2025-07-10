@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
-from schemas.schemas import LoginRequest, User
+from schemas.schemas import User
 from db.db import get_db_connection
 from passlib.context import CryptContext
 import psycopg2.extras
