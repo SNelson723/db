@@ -21,7 +21,7 @@ def login_user(request: LoginRequest, db=Depends(get_db_connection)):
         
         # If no user is found, return an error response
         if user is None:
-            return JSONResponse(status_code=401, content={"success": False, "error": 2, "authenticated": is_valid})
+            return JSONResponse(status_code=401, content={"success": False, "error": 2, "authenticated": False})
           
         # The password is accessible from the user dictionary established by psycopg2.extras.DictCursor
         # This allows us to access the password field directly
