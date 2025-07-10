@@ -122,3 +122,20 @@ def update_status(todo_id: int, is_complete: bool, userid: int, db=Depends(get_d
         cursor.close()
 
 # DELETE
+@todos.delete('/delete_todo')
+def delete_todo(todo_id: int, userid: int, db=Depends(get_db_connection), current_user: TokenData = Depends(get_current_user)):
+    cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    try:
+        cursor.execute("DELETE FROM todos WHERE id = %s AND userid = %s RETURNING *", (todo_id, userid))
+        deleted_todo = cursor.fetchone()
+        db.commit()
+
+        if deleted_todo:
+            return {"success": True, "error": 0, "message": "Todo deleted successfully", "todo": dict(deleted_todo)}
+        else:
+            return {"success": False, "error": 2, "message": "Todo not found"}
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "error": 1, "message": str(e)}
+    finally:
+        cursor.close()
