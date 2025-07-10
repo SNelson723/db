@@ -17,6 +17,10 @@ def login_user(request: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db
         
         # Get the user by username
         cursor.execute("SELECT * FROM users WHERE username = %s", (request.username,))
+        
+        # Get column names from the result set
+        column_names = [desc[0] for desc in cursor.description]
+        
         user = cursor.fetchone()
         
         # If no user is found, return an error response
@@ -34,7 +38,19 @@ def login_user(request: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db
           
         # Generate a token for the user => the generate_token function creates a JWT token with the user's username
         access_token = generate_token(data={"username": user['username']})
-        return {"access_token": access_token, "token_type": "bearer"}
+        user_data = dict(zip(column_names, user))
+        
+        return {
+          "access_token": access_token, 
+          "token_type": "bearer", 
+          "user": {
+              'username': user_data['username'], 
+              'email': user_data['email'], 
+              'id': user_data['id']
+          }, 
+          "success": True, 
+          "error": 0
+        }
     except Exception as e:
         return JSONResponse(status_code=401, content={"success": False, "error": 1, "msg": str(e)})
     finally:

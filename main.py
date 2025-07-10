@@ -1,17 +1,28 @@
 from fastapi import FastAPI, Depends
+import psycopg2
 from routers.login import login
 from db.db import get_db_connection
 from utils import get_current_user
 from schemas.schemas import TokenData
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/questions")
 # defines the endpoint function => db parameter tells FastAPI to run the connection function and pass its result (a db connection) as the db argument
 def get_questions(db=Depends(get_db_connection), current_user: TokenData = Depends(get_current_user)):
+    cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:
       # create a cursor object to execute SQL queries => used to execute sql queries and fetch results from the database
-      cursor = db.cursor()
       
       # Execute a query to fetch all questions
       cursor.execute("SELECT * FROM questions")
