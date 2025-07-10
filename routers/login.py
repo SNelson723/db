@@ -4,6 +4,7 @@ from schemas.schemas import LoginRequest, CreatUser
 from db.db import get_db_connection
 from passlib.context import CryptContext
 import psycopg2.extras
+from utils import generate_token
 
 login = APIRouter()
 
@@ -11,7 +12,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 @login.post('/login')
 def login_user(request: LoginRequest, db=Depends(get_db_connection)):
-    is_valid = False
     cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:
         
@@ -32,8 +32,9 @@ def login_user(request: LoginRequest, db=Depends(get_db_connection)):
         if not pwd_context.verify(request.password, hashed_password):
             return JSONResponse(status_code=401, content={"success": False, "error": 1, "msg": "Invalid username or password"})
           
-        is_valid = True
-        return {"success": True, "error": 0, "authenticated": is_valid}
+        # Generate a token for the user => the generate_token function creates a JWT token with the user's username
+        access_token = generate_token(data={"username": user['username']})
+        return {"success": True, "error": 0, "token": access_token, "token_type": "Bearer"}
     except Exception as e:
         return JSONResponse(status_code=401, content={"success": False, "error": 1, "msg": str(e)})
     finally:
