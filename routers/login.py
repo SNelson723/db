@@ -1,27 +1,31 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from schemas.schemas import LoginRequest, CreatUser
+from fastapi.security import OAuth2PasswordRequestForm
+from schemas.schemas import User
 from db.db import get_db_connection
 from passlib.context import CryptContext
 import psycopg2.extras
+from utils import generate_token
 
 login = APIRouter()
-
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 @login.post('/login')
-def login_user(request: LoginRequest, db=Depends(get_db_connection)):
-    is_valid = False
+def login_user(request: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db_connection)):
     cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:
         
         # Get the user by username
         cursor.execute("SELECT * FROM users WHERE username = %s", (request.username,))
+        
+        # Get column names from the result set
+        column_names = [desc[0] for desc in cursor.description]
+        
         user = cursor.fetchone()
         
         # If no user is found, return an error response
         if user is None:
-            return JSONResponse(status_code=401, content={"success": False, "error": 2, "authenticated": is_valid})
+            return JSONResponse(status_code=401, content={"success": False, "error": 2, "authenticated": False})
           
         # The password is accessible from the user dictionary established by psycopg2.extras.DictCursor
         # This allows us to access the password field directly
@@ -32,8 +36,21 @@ def login_user(request: LoginRequest, db=Depends(get_db_connection)):
         if not pwd_context.verify(request.password, hashed_password):
             return JSONResponse(status_code=401, content={"success": False, "error": 1, "msg": "Invalid username or password"})
           
-        is_valid = True
-        return {"success": True, "error": 0, "authenticated": is_valid}
+        # Generate a token for the user => the generate_token function creates a JWT token with the user's username
+        access_token = generate_token(data={"username": user['username']})
+        user_data = dict(zip(column_names, user))
+        
+        return {
+          "access_token": access_token, 
+          "token_type": "bearer", 
+          "user": {
+              'username': user_data['username'], 
+              'email': user_data['email'], 
+              'id': user_data['id']
+          }, 
+          "success": True, 
+          "error": 0
+        }
     except Exception as e:
         return JSONResponse(status_code=401, content={"success": False, "error": 1, "msg": str(e)})
     finally:
@@ -43,7 +60,7 @@ def login_user(request: LoginRequest, db=Depends(get_db_connection)):
 
   
 @login.post('/create')
-def create_user(request: CreatUser, db=Depends(get_db_connection)):
+def create_user(request: User, db=Depends(get_db_connection)):
   # Create the cursor object to execute SQL queries
   cursor = db.cursor()
   try:
