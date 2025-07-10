@@ -1,0 +1,7 @@
+pydantic
+psycopg2
+fastapi
+bcrypt==4.0.1
+passlib[bcrypt]
+uvicorn
+python-jose
