@@ -1,17 +1,17 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from schemas.schemas import LoginRequest, CreatUser
+from fastapi.security import OAuth2PasswordRequestForm
+from schemas.schemas import LoginRequest, User
 from db.db import get_db_connection
 from passlib.context import CryptContext
 import psycopg2.extras
 from utils import generate_token
 
 login = APIRouter()
-
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 @login.post('/login')
-def login_user(request: LoginRequest, db=Depends(get_db_connection)):
+def login_user(request: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db_connection)):
     cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:
         
@@ -34,7 +34,7 @@ def login_user(request: LoginRequest, db=Depends(get_db_connection)):
           
         # Generate a token for the user => the generate_token function creates a JWT token with the user's username
         access_token = generate_token(data={"username": user['username']})
-        return {"success": True, "error": 0, "token": access_token, "token_type": "Bearer"}
+        return {"access_token": access_token, "token_type": "bearer"}
     except Exception as e:
         return JSONResponse(status_code=401, content={"success": False, "error": 1, "msg": str(e)})
     finally:
@@ -44,7 +44,7 @@ def login_user(request: LoginRequest, db=Depends(get_db_connection)):
 
   
 @login.post('/create')
-def create_user(request: CreatUser, db=Depends(get_db_connection)):
+def create_user(request: User, db=Depends(get_db_connection)):
   # Create the cursor object to execute SQL queries
   cursor = db.cursor()
   try:
