@@ -7,6 +7,21 @@ from utils import get_current_user
 
 todos = APIRouter()
 
+# Testing my function
+@todos.get('/test')
+def test_function(is_complete: bool, userid: int, db=Depends(get_db_connection), current_user: TokenData = Depends(get_current_user)):
+    cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
+    try:
+        cursor.execute('SELECT * FROM usp_get_uncompleted_tasks(%s, %s)', (is_complete, userid))
+        rows = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+        todos = [dict(zip(column_names, row)) for row in rows]
+        return {"success": True, "error": 0, "todos": todos}
+    except Exception as e:
+        return {"success": False, "error": 1, "message": str(e)}
+    finally:
+        cursor.close()
+
 # GET
 @todos.get('/get_todos')
 def get_todos(id: int, db=Depends(get_db_connection), current_user: TokenData = Depends(get_current_user)):

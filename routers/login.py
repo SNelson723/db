@@ -13,8 +13,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 @login.post('/login')
 def login_user(request: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db_connection)):
     cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
-    try:
-        
+    try:      
         # Get the user by username
         cursor.execute("SELECT * FROM users WHERE username = %s", (request.username,))
         
