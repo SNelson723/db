@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends
 import psycopg2
 from routers.login import login
 from routers.todos import todos
+from routers.form import form
 from db.db import get_db_connection
 from utils import get_current_user
 from schemas.schemas import TokenData
@@ -58,3 +59,8 @@ def get_questions(db=Depends(get_db_connection), current_user: TokenData = Depen
 
 app.include_router(login, prefix="/auth", tags=["auth"])
 app.include_router(todos, prefix="/todos", tags=["todos"])
+app.include_router(form, prefix="/form", tags=["form"])
+
+# the command for running uvicorn on port 5000
+# This allows React Native to also hit these endpoints
+# uvicorn main:app --host 0.0.0.0 --reload --port 5000
