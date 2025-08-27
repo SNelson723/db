@@ -5,3 +5,4 @@ bcrypt==4.0.1
 passlib[bcrypt]
 uvicorn
 python-jose
+python-multipart
