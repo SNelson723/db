@@ -1,17 +1,18 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
+from jose import JWTError, jwt
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from schemas.schemas import User
 from db.db import get_db_connection
 from passlib.context import CryptContext
 import psycopg2.extras
-from utils import generate_token
+from utils import generate_token, secret_key, algorithm
 
 login = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 @login.post('/login')
-def login_user(request: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db_connection)):
+def login_user(response: Response, request: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db_connection)):
     cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:      
         # Get the user by username
@@ -38,6 +39,17 @@ def login_user(request: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db
         # Generate a token for the user => the generate_token function creates a JWT token with the user's username
         access_token = generate_token(data={"username": user['username']})
         user_data = dict(zip(column_names, user))
+        
+        # Set the JWT token in a HttpOnly secure cookie
+        response.set_cookie(
+            key="access_token",
+            value=f"Bearer {access_token}",
+            httponly=True,
+            secure=False,  # Use False when not using HTTPS locally
+            samesite="lax",
+            max_age=3600,
+        )
+
         
         return {
           "access_token": access_token, 
@@ -95,3 +107,27 @@ def create_user(request: User, db=Depends(get_db_connection)):
     # Ensure the cursor is closed even if an error occurs
     if cursor:
         cursor.close()
+
+@login.post("/logout")
+def logout_user(response: Response):
+    # Delete the cookie by setting it empty with expiry=0 and deleting it via delete_cookie
+    response.delete_cookie(
+        key="access_token",
+        path="/",
+        secure=False,
+        samesite="lax",
+        httponly= False
+    )
+    
+    # Failsafe if the cookie doesn't get remove the cookie
+    response.set_cookie(
+        key="access_token",
+        value="",
+        max_age=0,
+        expires=0,
+        path="/",
+        secure=False,
+        samesite="lax",
+        httponly=True,
+    )
+    return {"error": 0, "success": True, "message": "Logged out successfully"}

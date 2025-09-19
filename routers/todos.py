@@ -9,10 +9,10 @@ todos = APIRouter()
 
 # Testing my function
 @todos.get('/test')
-def test_function(is_complete: bool, userid: int, db=Depends(get_db_connection), current_user: TokenData = Depends(get_current_user)):
+def test_function(is_complete: bool, user_id: int, db=Depends(get_db_connection), current_user: TokenData = Depends(get_current_user)):
     cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:
-        cursor.execute('SELECT * FROM usp_get_uncompleted_tasks(%s, %s)', (is_complete, userid))
+        cursor.execute('SELECT * FROM usp_get_uncompleted_tasks(%s, %s)', (is_complete, user_id))
         rows = cursor.fetchall()
         column_names = [desc[0] for desc in cursor.description]
         todos = [dict(zip(column_names, row)) for row in rows]
@@ -27,7 +27,7 @@ def test_function(is_complete: bool, userid: int, db=Depends(get_db_connection),
 def get_todos(id: int, db=Depends(get_db_connection), current_user: TokenData = Depends(get_current_user)):
   cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
   try:
-      cursor.execute("SELECT * FROM todos WHERE userid = %s", (id,))
+      cursor.execute("SELECT * FROM todos WHERE user_id = %s", (id,))
       rows = cursor.fetchall()
       column_names = [desc[0] for desc in cursor.description]
       
@@ -42,10 +42,10 @@ def get_todos(id: int, db=Depends(get_db_connection), current_user: TokenData = 
       cursor.close()
       
 @todos.get('/get_category')
-def get_category(userid: int, category: str, db=Depends(get_db_connection), current_user: TokenData = Depends(get_current_user)):
+def get_category(user_id: int, category: str, db=Depends(get_db_connection), current_user: TokenData = Depends(get_current_user)):
     cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:
-        cursor.execute("SELECT * FROM todos WHERE userid = %s AND LOWER(category) = LOWER(%s)", (userid, category))
+        cursor.execute("SELECT * FROM todos WHERE user_id = %s AND LOWER(category) = LOWER(%s)", (user_id, category))
         rows = cursor.fetchall()
         column_names = [desc[0] for desc in cursor.description]
         
@@ -62,10 +62,10 @@ def get_category(userid: int, category: str, db=Depends(get_db_connection), curr
 
 # POST
 @todos.post('/add_todo')
-def add_todo(task: str, is_complete: bool, userid: int, category: str, db=Depends(get_db_connection), current_user: TokenData = Depends(get_current_user)):
+def add_todo(task: str, is_complete: bool, user_id: int, category: str, db=Depends(get_db_connection), current_user: TokenData = Depends(get_current_user)):
     cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:
-        cursor.execute("INSERT INTO todos (task, is_complete, userid, category) VALUES (%s, %s, %s, %s) RETURNING id", (task, is_complete, userid, category))
+        cursor.execute("INSERT INTO todos (todo, complete, user_id, category) VALUES (%s, %s, %s, %s) RETURNING id", (task, is_complete, user_id, category))
         todo_id = cursor.fetchone()[0]
         
         db.commit()
@@ -81,15 +81,15 @@ def add_todo(task: str, is_complete: bool, userid: int, category: str, db=Depend
 def update_task(
     todo_id: int,
     task: str,
-    userid: int,
+    user_id: int,
     db=Depends(get_db_connection),
     current_user: TokenData = Depends(get_current_user)
 ):
     cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:
         cursor.execute(
-            "UPDATE todos SET task = %s WHERE id = %s AND userid = %s RETURNING *",
-            (task, todo_id, userid)
+            "UPDATE todos SET todo = %s WHERE id = %s AND user_id = %s RETURNING *",
+            (task, todo_id, user_id)
         )
         updated_todo = cursor.fetchone()
         db.commit()
@@ -111,12 +111,12 @@ def update_task(
         cursor.close()
 
 @todos.put('/update_status')
-def update_status(todo_id: int, is_complete: bool, userid: int, db=Depends(get_db_connection), current_user: TokenData = Depends(get_current_user)):
+def update_status(todo_id: int, is_complete: bool, user_id: int, db=Depends(get_db_connection), current_user: TokenData = Depends(get_current_user)):
     cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:
         cursor.execute(
-            "UPDATE todos SET is_complete = %s WHERE id = %s AND userid = %s RETURNING *",
-            (is_complete, todo_id, userid)
+            "UPDATE todos SET complete = %s WHERE id = %s AND user_id = %s RETURNING *",
+            (is_complete, todo_id, user_id)
         )
         updated_todo = cursor.fetchone()
         db.commit()
@@ -138,10 +138,10 @@ def update_status(todo_id: int, is_complete: bool, userid: int, db=Depends(get_d
 
 # DELETE
 @todos.delete('/delete_todo')
-def delete_todo(todo_id: int, userid: int, db=Depends(get_db_connection), current_user: TokenData = Depends(get_current_user)):
+def delete_todo(todo_id: int, user_id: int, db=Depends(get_db_connection), current_user: TokenData = Depends(get_current_user)):
     cursor = db.cursor(cursor_factory=psycopg2.extras.DictCursor)
     try:
-        cursor.execute("DELETE FROM todos WHERE id = %s AND userid = %s RETURNING *", (todo_id, userid))
+        cursor.execute("DELETE FROM todos WHERE id = %s AND user_id = %s RETURNING *", (todo_id, user_id))
         deleted_todo = cursor.fetchone()
         db.commit()
 
